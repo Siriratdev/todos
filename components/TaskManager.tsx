@@ -4,18 +4,19 @@
 import { useEffect, useState } from "react";
 import supabase from "../lib/supabaseClient";
 
-export default function TaskManager() {
-  // ฟอร์มสร้างงานใหม่
+export default function TaskManager({
+  filterCategoryId,
+}: {
+  filterCategoryId?: string | null;
+}) {
   const [title, setTitle] = useState("");
   const [descript, setDescript] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
 
-  // data
   const [categories, setCategories] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
 
-  // track task ที่กำลังแก้ไข
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     title: "",
@@ -24,14 +25,26 @@ export default function TaskManager() {
     category_id: "",
   });
 
+  // refetch ทุกครั้งที่หมวดเปลี่ยน
   useEffect(() => {
     fetchAll();
-  }, []);
+  }, [filterCategoryId]);
 
   async function fetchAll() {
+    // เตรียม query
+    let query = supabase
+      .from("tasks")
+      .select("*")
+      .order("due_date", { ascending: true });
+
+    // ถ้ามี filterCategoryId ให้ .eq("category_id", filterCategoryId)
+    if (filterCategoryId) {
+      query = query.eq("category_id", filterCategoryId);
+    }
+
     const [{ data: cats }, { data: ts }] = await Promise.all([
       supabase.from("categories").select("*"),
-      supabase.from("tasks").select("*").order("due_date", { ascending: true }),
+      query,
     ]);
     setCategories(cats ?? []);
     setTasks(ts ?? []);
@@ -59,7 +72,7 @@ export default function TaskManager() {
   }
 
   async function removeTask(id: string) {
-    if (!confirm("Delete task?")) return;
+    if (!confirm("แน่ใจหรือไม่ว่าต้องการลบงานนี้?")) return;
     await supabase.from("tasks").delete().eq("id", id);
     fetchAll();
   }
@@ -84,36 +97,36 @@ export default function TaskManager() {
         category_id: editForm.category_id || null,
       })
       .eq("id", id);
-
     setEditingId(null);
     fetchAll();
   }
 
   return (
-    <div className="card">
-      {/* ฟอร์มสร้างงานใหม่ */}
-      <h3>Create Task</h3>
-      <form onSubmit={createTask} className="flex flex-col gap-2">
+    <div className="card p-6 bg-white rounded-lg shadow max-w-3xl mx-auto">
+      <h3 className="text-xl font-semibold mb-4">เพิ่มรายการ TODO</h3>
+      <form onSubmit={createTask} className="space-y-4">
         <input
+          type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Title"
-          className="p-2 border"
+          placeholder="ชื่อเรื่อง"
+          className="w-full p-2 border rounded"
           required
         />
         <textarea
           value={descript}
           onChange={(e) => setDescript(e.target.value)}
-          placeholder="Description"
-          className="p-2 border"
+          placeholder="รายละเอียด"
+          className="w-full p-2 border rounded"
+          rows={3}
         />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <select
             value={categoryId ?? ""}
             onChange={(e) => setCategoryId(e.target.value || null)}
-            className="p-2 border"
+            className="flex-1 p-2 border rounded"
           >
-            <option value="">No category</option>
+            <option value="">เลือกหมวดหมู่</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -124,79 +137,55 @@ export default function TaskManager() {
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            className="p-2 border"
+            className="p-2 border rounded"
           />
-          <button className="bg-green-600 text-white p-2 rounded">Add</button>
+          <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+            เพิ่มด่วน
+          </button>
         </div>
       </form>
 
-      {/* รายการงาน */}
-      <h4 className="mt-3">Tasks</h4>
-      <ul className="list-none p-0">
+      <h4 className="mt-8 mb-3 text-lg font-semibold">รายการสิ่งต้องทำ</h4>
+      <ul className="divide-y divide-gray-200">
         {tasks.map((t) => (
           <li
             key={t.id}
-            className="flex flex-col border-b border-gray-200 p-2"
+            className="py-3 flex flex-col md:flex-row md:justify-between md:items-center"
           >
             {editingId === t.id ? (
-              // 🔹 ฟอร์มแก้ไข (แยกออกจากฟอร์ม create)
-              <div className="flex flex-col gap-2">
+              <div className="w-full flex flex-col gap-4">
                 <input
                   value={editForm.title}
                   onChange={(e) =>
                     setEditForm({ ...editForm, title: e.target.value })
                   }
-                  className="p-1 border"
+                  className="w-full p-2 border rounded"
                 />
                 <textarea
                   value={editForm.descript}
                   onChange={(e) =>
                     setEditForm({ ...editForm, descript: e.target.value })
                   }
-                  className="p-1 border"
+                  className="w-full p-2 border rounded"
+                  rows={3}
                 />
-                <div className="flex gap-2">
-                  <select
-                    value={editForm.category_id ?? ""}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, category_id: e.target.value })
-                    }
-                    className="p-1 border"
-                  >
-                    <option value="">No category</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="date"
-                    value={editForm.due_date}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, due_date: e.target.value })
-                    }
-                    className="p-1 border"
-                  />
-                </div>
-                <div className="flex gap-2 mt-1">
+                <div className="flex gap-2 justify-end">
                   <button
                     onClick={() => saveEdit(t.id)}
-                    className="bg-blue-500 text-white px-2 py-1 rounded"
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded"
                   >
-                    Save
+                    บันทึก
                   </button>
                   <button
                     onClick={() => setEditingId(null)}
-                    className="bg-gray-400 text-white px-2 py-1 rounded"
+                    className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-1 rounded"
                   >
-                    Cancel
+                    ยกเลิก
                   </button>
                 </div>
               </div>
             ) : (
-              // 🔹 โหมดแสดงปกติ
-              <div className="flex justify-between items-center">
+              <div className="w-full flex flex-col md:flex-row md:justify-between md:items-center">
                 <div>
                   <div
                     className={`font-semibold ${
@@ -205,26 +194,37 @@ export default function TaskManager() {
                   >
                     {t.title}
                   </div>
-                  <div className="text-xs text-gray-700">{t.descript}</div>
+                  <div className="text-sm text-gray-700">{t.descript}</div>
                   <div className="text-xs text-gray-500">
-                    Due: {t.due_date || "-"}{" "}
-                    {t.category_id
-                      ? `• ${
-                          categories.find((c) => c.id === t.category_id)?.name
-                        }`
-                      : ""}
+                    กำหนด: {t.due_date || "-"}{" "}
+                    {t.category_id &&
+                      `• ${
+                        categories.find((c) => c.id === t.category_id)?.name
+                      }`}
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => toggleStatus(t.id, t.status)}>
-                    {t.status ? "Undo" : "Done"}
+                <div className="flex gap-2 mt-2 md:mt-0">
+                  <button
+                    onClick={() => toggleStatus(t.id, t.status)}
+                    className={`px-3 py-1 rounded-full text-white ${
+                      t.status
+                        ? "bg-red-500 hover:bg-red-600"
+                        : "bg-green-500 hover:bg-green-600"
+                    }`}
+                  >
+                    {t.status ? "ยังไม่เสร็จ" : "สำเร็จ"}
                   </button>
-                  <button onClick={() => startEdit(t)}>Edit</button>
+                  <button
+                    onClick={() => startEdit(t)}
+                    className="px-3 py-1 rounded text-blue-600 hover:bg-blue-50"
+                  >
+                    แก้ไข
+                  </button>
                   <button
                     onClick={() => removeTask(t.id)}
-                    className="text-red-500"
+                    className="px-3 py-1 rounded text-red-600 hover:bg-red-50"
                   >
-                    Delete
+                    ลบ
                   </button>
                 </div>
               </div>

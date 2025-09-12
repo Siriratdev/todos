@@ -1,16 +1,16 @@
+// app/auth/login/page.tsx
 "use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import supabase from "d:/myprojex/todo-list/lib/supabaseClient";
 
-export default function RegisterPage() {
+export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-  async function handleRegister(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
     const res = await fetch("/api/auth/login", {
@@ -20,43 +20,51 @@ export default function RegisterPage() {
     });
 
     if (res.ok) {
-      router.push("/dashboard/tasks");
+      router.push("/dashboard");
     } else {
-      alert("Login failed");
+      alert("เข้าสู่ระบบไม่สำเร็จ");
     }
-  };
+  }
 
   return (
     <div className="login-container">
-      <form className="login-box" onSubmit={handleRegister}>
+      {/* TODO ออกมานอกกรอบ */}
+      <h1 className="todo-outside">TODO</h1>
+
+      <div className="login-box">
         <h2>Login</h2>
+        <form onSubmit={handleLogin}>
+          <div className="input-group">
+            <label htmlFor="username">Username</label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </div>
 
-        <div className="input-group">
-          <label>Username</label>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-        </div>
+          <div className="input-group">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
 
-        <div className="input-group">
-          <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-
-        <button type="submit" className="btn">Login</button>
+          <button type="submit" className="btn">
+            Login
+          </button>
+        </form>
 
         <p className="switch-link">
           ยังไม่มีบัญชี? <Link href="/auth/register">สมัครสมาชิก</Link>
         </p>
-      </form>
+      </div>
     </div>
   );
 }
