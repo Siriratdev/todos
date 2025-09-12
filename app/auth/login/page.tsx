@@ -28,7 +28,6 @@ export default function LoginPage() {
 
   return (
     <div className="login-container">
-      {/* TODO ออกมานอกกรอบ */}
       <h1 className="todo-outside">TODO</h1>
 
       <div className="login-box">

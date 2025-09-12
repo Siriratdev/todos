@@ -4,17 +4,26 @@
 import { useEffect, useState } from "react";
 import supabase from "../lib/supabaseClient";
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 export default function TaskManager({
   filterCategoryId,
+  defaultCategory,
 }: {
   filterCategoryId?: string | null;
+  defaultCategory?: { id: string; name: string; color: string } | null;
 }) {
   const [title, setTitle] = useState("");
   const [descript, setDescript] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState<string | null>(
+    defaultCategory?.id || null
+  );
 
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -31,38 +40,34 @@ export default function TaskManager({
   }, [filterCategoryId]);
 
   async function fetchAll() {
-    // เตรียม query
-    let query = supabase
+    let q = supabase
       .from("tasks")
       .select("*")
       .order("due_date", { ascending: true });
-
-    // ถ้ามี filterCategoryId ให้ .eq("category_id", filterCategoryId)
-    if (filterCategoryId) {
-      query = query.eq("category_id", filterCategoryId);
-    }
+    if (filterCategoryId) q = q.eq("category_id", filterCategoryId);
 
     const [{ data: cats }, { data: ts }] = await Promise.all([
-      supabase.from("categories").select("*"),
-      query,
+      supabase.from("categories").select("id,name"),
+      q,
     ]);
     setCategories(cats ?? []);
     setTasks(ts ?? []);
+    setCategoryId(defaultCategory?.id || null);
   }
 
   async function createTask(e: React.FormEvent) {
     e.preventDefault();
     await supabase.from("tasks").insert({
-      category_id: categoryId,
       title,
       descript,
       due_date: dueDate || null,
+      category_id: categoryId,
       status: false,
     });
     setTitle("");
     setDescript("");
     setDueDate("");
-    setCategoryId(null);
+    setCategoryId(defaultCategory?.id || null);
     fetchAll();
   }
 
@@ -82,8 +87,8 @@ export default function TaskManager({
     setEditForm({
       title: task.title,
       descript: task.descript,
-      due_date: task.due_date || "",
-      category_id: task.category_id || "",
+      due_date: task.due_date ?? "",
+      category_id: task.category_id ?? "",
     });
   }
 
@@ -103,16 +108,17 @@ export default function TaskManager({
 
   return (
     <div className="card p-6 bg-white rounded-lg shadow max-w-3xl mx-auto">
+      {/* เพิ่มรายการ TODO */}
       <h3 className="text-xl font-semibold mb-4">เพิ่มรายการ TODO</h3>
       <form onSubmit={createTask} className="space-y-4">
         <input
-          type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="ชื่อเรื่อง"
           className="w-full p-2 border rounded"
           required
         />
+
         <textarea
           value={descript}
           onChange={(e) => setDescript(e.target.value)}
@@ -120,31 +126,39 @@ export default function TaskManager({
           className="w-full p-2 border rounded"
           rows={3}
         />
+
         <div className="flex flex-wrap gap-2">
           <select
-            value={categoryId ?? ""}
+            value={categoryId || ""}
             onChange={(e) => setCategoryId(e.target.value || null)}
             className="flex-1 p-2 border rounded"
           >
-            <option value="">เลือกหมวดหมู่</option>
+            <option value="">
+              {defaultCategory
+                ? `หมวด: ${defaultCategory.name}`
+                : "เลือกหมวดหมู่"}
+            </option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
           </select>
+
           <input
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
             className="p-2 border rounded"
           />
-          <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
-            เพิ่มด่วน
+
+          <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+            เพิ่ม
           </button>
         </div>
       </form>
 
+      {/* รายการสิ่งต้องทำ */}
       <h4 className="mt-8 mb-3 text-lg font-semibold">รายการสิ่งต้องทำ</h4>
       <ul className="divide-y divide-gray-200">
         {tasks.map((t) => (
@@ -153,6 +167,7 @@ export default function TaskManager({
             className="py-3 flex flex-col md:flex-row md:justify-between md:items-center"
           >
             {editingId === t.id ? (
+              // --- EDIT MODE ---
               <div className="w-full flex flex-col gap-4">
                 <input
                   value={editForm.title}
@@ -161,6 +176,7 @@ export default function TaskManager({
                   }
                   className="w-full p-2 border rounded"
                 />
+
                 <textarea
                   value={editForm.descript}
                   onChange={(e) =>
@@ -169,22 +185,51 @@ export default function TaskManager({
                   className="w-full p-2 border rounded"
                   rows={3}
                 />
+
+                {/* ตรงนี้เพิ่มช่องเลือกหมวดกับวันที่ */}
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={editForm.category_id}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, category_id: e.target.value })
+                    }
+                    className="flex-1 p-2 border rounded"
+                  >
+                    <option value="">เลือกหมวดหมู่</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    type="date"
+                    value={editForm.due_date}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, due_date: e.target.value })
+                    }
+                    className="p-2 border rounded"
+                  />
+                </div>
+
                 <div className="flex gap-2 justify-end">
                   <button
                     onClick={() => saveEdit(t.id)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded"
                   >
                     บันทึก
                   </button>
                   <button
                     onClick={() => setEditingId(null)}
-                    className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-1 rounded"
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-1 rounded"
                   >
                     ยกเลิก
                   </button>
                 </div>
               </div>
             ) : (
+              // --- VIEW MODE ---
               <div className="w-full flex flex-col md:flex-row md:justify-between md:items-center">
                 <div>
                   <div
@@ -208,8 +253,8 @@ export default function TaskManager({
                     onClick={() => toggleStatus(t.id, t.status)}
                     className={`px-3 py-1 rounded-full text-white ${
                       t.status
-                        ? "bg-red-500 hover:bg-red-600"
-                        : "bg-green-500 hover:bg-green-600"
+                        ? "bg-red-600 hover:bg-red-700"
+                        : "bg-green-600 hover:bg-green-700"
                     }`}
                   >
                     {t.status ? "ยังไม่เสร็จ" : "สำเร็จ"}

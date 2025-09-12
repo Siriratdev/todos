@@ -1,4 +1,3 @@
-// app/dashboard/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -10,41 +9,43 @@ import CalendarView from "@/components/CalendarView";
 
 type Section = "tasks" | "categories" | "calendar";
 
+interface CategoryInfo {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export default function DashboardPage() {
   const [activeSection, setActiveSection] = useState<Section>("tasks");
+  const [selectedCategory, setSelectedCategory] = useState<CategoryInfo | null>(null);
   const router = useRouter();
 
-  // เพิ่ม confirm ก่อน logout
   async function handleLogout() {
-    const ok = window.confirm("แน่ใจหรือไม่ว่าต้องการออกจากระบบ?");
-    if (!ok) return;
-
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Logout error:", error.message);
-    } else {
-      router.push("/auth/login");
-    }
+    if (!confirm("แน่ใจหรือไม่ว่าต้องการออกจากระบบ?")) return;
+    await supabase.auth.signOut();
+    router.push("/auth/login");
   }
 
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 p-6 flex flex-col">
+      <aside className="w-64 bg-white border-r p-6 flex flex-col">
         <button
-          onClick={() => setActiveSection("tasks")}
-          className={`mb-4 px-4 py-2 text-left rounded w-full ${
-            activeSection === "tasks"
+          onClick={() => {
+            setSelectedCategory(null);
+            setActiveSection("tasks");
+          }}
+          className={`mb-4 text-left px-4 py-2 rounded w-full ${
+            activeSection === "tasks" && !selectedCategory
               ? "bg-blue-500 text-white"
               : "hover:bg-gray-100 text-gray-700"
           }`}
         >
           สิ่งที่ต้องทำ
         </button>
-
         <button
           onClick={() => setActiveSection("categories")}
-          className={`mb-4 px-4 py-2 text-left rounded w-full ${
+          className={`mb-4 text-left px-4 py-2 rounded w-full ${
             activeSection === "categories"
               ? "bg-blue-500 text-white"
               : "hover:bg-gray-100 text-gray-700"
@@ -52,10 +53,9 @@ export default function DashboardPage() {
         >
           หมวดหมู่
         </button>
-
         <button
           onClick={() => setActiveSection("calendar")}
-          className={`mb-4 px-4 py-2 text-left rounded w-full ${
+          className={`mb-4 text-left px-4 py-2 rounded w-full ${
             activeSection === "calendar"
               ? "bg-blue-500 text-white"
               : "hover:bg-gray-100 text-gray-700"
@@ -67,37 +67,56 @@ export default function DashboardPage() {
         <div className="mt-auto">
           <button
             onClick={handleLogout}
-            className="px-4 py-2 rounded w-full hover:bg-gray-100 text-red-600 text-left"
+            className="text-red-600 hover:bg-gray-100 px-4 py-2 rounded w-full text-left"
           >
             ออกจากระบบ
           </button>
         </div>
       </aside>
 
-      {/* Main content centered */}
-      <main className="flex-1 flex justify-center overflow-auto p-6">
-        <div className="w-full max-w-4xl">
-          {activeSection === "tasks" && (
-            <>
-              <h1 className="text-2xl font-semibold mb-4">งาน</h1>
-              <TaskManager />
-            </>
-          )}
+      {/* Main */}
+      <main className="flex-1 p-6 overflow-auto">
+        {/* Tasks */}
+        {activeSection === "tasks" && (
+          <div className="max-w-4xl mx-auto">
+            {selectedCategory ? (
+              <h1
+                className="text-2xl font-semibold mb-4 p-3 rounded text-white"
+                style={{ backgroundColor: selectedCategory.color }}
+              >
+                งานหมวด: {selectedCategory.name}
+              </h1>
+            ) : (
+              <h1 className="text-2xl font-semibold mb-4">งานทั้งหมด</h1>
+            )}
 
-          {activeSection === "categories" && (
-            <>
-              <h1 className="text-2xl font-semibold mb-4">หมวดหมู่</h1>
-              <CategoryForm />
-            </>
-          )}
+            <TaskManager
+              filterCategoryId={selectedCategory?.id}
+              defaultCategory={selectedCategory}
+            />
+          </div>
+        )}
 
-          {activeSection === "calendar" && (
-            <>
-              <h1 className="text-2xl font-semibold mb-4">ปฏิทิน</h1>
-              <CalendarView userId={null} />
-            </>
-          )}
-        </div>
+        {/* Categories */}
+        {activeSection === "categories" && (
+          <div className="max-w-lg mx-auto">
+            <h1 className="text-2xl font-semibold mb-4">หมวดหมู่</h1>
+            <CategoryForm
+              onSelect={(id, name, color) => {
+                setSelectedCategory({ id, name, color });
+                setActiveSection("tasks");
+              }}
+            />
+          </div>
+        )}
+
+        {/* Calendar */}
+        {activeSection === "calendar" && (
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-2xl font-semibold mb-4">ปฏิทิน</h1>
+            <CalendarView />
+          </div>
+        )}
       </main>
     </div>
   );

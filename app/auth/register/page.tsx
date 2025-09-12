@@ -28,6 +28,7 @@ export default function RegisterPage() {
 
   return (
     <div className="login-container">
+      <h1 className="todo-outside">TODO</h1>
       <form className="login-box" onSubmit={handleRegister}>
         <h2>Register</h2>
 
