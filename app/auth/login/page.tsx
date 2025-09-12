@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import supabase from "d:/myprojex/todo-list/lib/supabaseClient";
 
-export default function LoginPage() {
+export default function RegisterPage() {
+  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
 
     const res = await fetch("/api/auth/login", {
@@ -26,37 +27,34 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen">
-      <form
-        onSubmit={handleLogin}
-        className="p-6 bg-white rounded-lg shadow-md w-80"
-      >
-        <h1 className="text-xl font-bold mb-4">Login</h1>
-        <input
-          type="text"
-          placeholder="Username"
-          className="w-full p-2 border rounded mb-2"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          className="w-full p-2 border rounded mb-4"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button
-          type="submit"
-          className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Login
-        </button>
-        <p className="mt-4 text-sm">
-          No account?{" "}
-          <Link href="/auth/register" className="text-blue-600 hover:underline">
-            Register
-          </Link>
+    <div className="login-container">
+      <form className="login-box" onSubmit={handleRegister}>
+        <h2>Login</h2>
+
+        <div className="input-group">
+          <label>Username</label>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="input-group">
+          <label>Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+
+        <button type="submit" className="btn">Login</button>
+
+        <p className="switch-link">
+          ยังไม่มีบัญชี? <Link href="/auth/register">สมัครสมาชิก</Link>
         </p>
       </form>
     </div>

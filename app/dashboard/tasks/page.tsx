@@ -7,7 +7,7 @@ export default function TasksPage() {
   const [userId, setUserId] = useState<string | null>(null);
   useEffect(()=> {
     (async () => {
-      const res = await fetch("/api/auth/me");
+      const res = await fetch("/api/dashboard/tasks");
       if (res.ok) {
         const d = await res.json();
         setUserId(d?.user?.id ?? null);
@@ -16,7 +16,7 @@ export default function TasksPage() {
   }, []);
   return (
     <div className="container">
-      <h1>Tasks</h1>
+      <h1>TASKS</h1>
       <TaskManager userId={userId} />
     </div>
   );
