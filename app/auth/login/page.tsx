@@ -19,17 +19,19 @@ export default function LoginPage() {
       body: JSON.stringify({ username, password }),
     });
 
-    if (res.ok) {
+    const body = await res.json();
+
+    if (res.ok && body.userId) {
+      localStorage.setItem("userId", body.userId);
       router.push("/dashboard");
     } else {
-      alert("เข้าสู่ระบบไม่สำเร็จ");
+      alert(body.error || "เข้าสู่ระบบไม่สำเร็จ");
     }
   }
 
   return (
     <div className="login-container">
       <h1 className="todo-outside">TODO</h1>
-
       <div className="login-box">
         <h2>Login</h2>
         <form onSubmit={handleLogin}>

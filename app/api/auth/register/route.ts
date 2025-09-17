@@ -1,24 +1,33 @@
 // app/api/auth/register/route.ts
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseServer";
+import supabase from "@/lib/supabaseClient";
 import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
-  try {
-    const { username, password } = await req.json();
-    if (!username || !password) return NextResponse.json({ error: "username/password required" }, { status: 400 });
+  const { username, password } = await req.json();
 
-    const hashed = bcrypt.hashSync(password, 10);
+  // ตรวจสอบว่ามี username ซ้ำหรือไม่
+  const { data: existing } = await supabase
+    .from("users")
+    .select("id")
+    .eq("username", username)
+    .maybeSingle();
 
-    const { data, error } = await supabaseAdmin
-      .from("users")
-      .insert([{ username, password: hashed }])
-      .select()
-      .single();
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-    return NextResponse.json({ user: data });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  if (existing) {
+    return NextResponse.json({ error: "Username นี้ถูกใช้แล้ว" }, { status: 400 });
   }
+
+  // เข้ารหัสรหัสผ่าน
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const { data, error } = await supabase
+    .from("users")
+    .insert({ username, password: hashedPassword })
+    .select();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  return NextResponse.json({ success: true, user: data[0] });
 }

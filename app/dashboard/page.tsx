@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import supabase from "@/lib/supabaseClient";
 import TaskManager from "@/components/TaskManager";
@@ -18,12 +18,29 @@ interface CategoryInfo {
 export default function DashboardPage() {
   const [activeSection, setActiveSection] = useState<Section>("tasks");
   const [selectedCategory, setSelectedCategory] = useState<CategoryInfo | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
+
+  // โหลด userId จาก localStorage (หรือจาก Supabase Auth)
+  useEffect(() => {
+    const uid = localStorage.getItem("userId");
+    if (!uid) {
+      router.push("/auth/login");
+    } else {
+      setUserId(uid);
+    }
+  }, [router]);
 
   async function handleLogout() {
     if (!confirm("แน่ใจหรือไม่ว่าต้องการออกจากระบบ?")) return;
+    // ถ้าใช้ Supabase Auth
     await supabase.auth.signOut();
+    localStorage.removeItem("userId");
     router.push("/auth/login");
+  }
+
+  if (!userId) {
+    return <div className="p-6 text-center">Loading...</div>;
   }
 
   return (
@@ -91,7 +108,8 @@ export default function DashboardPage() {
             )}
 
             <TaskManager
-              filterCategoryId={selectedCategory?.id}
+              userId={userId}
+              filterCategoryId={selectedCategory?.id ?? null}
               defaultCategory={selectedCategory}
             />
           </div>
@@ -102,6 +120,7 @@ export default function DashboardPage() {
           <div className="max-w-lg mx-auto">
             <h1 className="text-2xl font-semibold mb-4">หมวดหมู่</h1>
             <CategoryForm
+              userId={userId}
               onSelect={(id, name, color) => {
                 setSelectedCategory({ id, name, color });
                 setActiveSection("tasks");

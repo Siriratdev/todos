@@ -1,4 +1,3 @@
-// components/TaskManager.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -9,22 +8,35 @@ interface Category {
   name: string;
 }
 
-export default function TaskManager({
-  filterCategoryId,
-  defaultCategory,
-}: {
+interface TaskItem {
+  id: string;
+  title: string;
+  descript: string;
+  due_date: string | null;
+  status: boolean;
+  category_id: string | null;
+}
+
+interface TaskManagerProps {
+  userId: string;
   filterCategoryId?: string | null;
   defaultCategory?: { id: string; name: string; color: string } | null;
-}) {
+}
+
+export default function TaskManager({
+  userId,
+  filterCategoryId,
+  defaultCategory,
+}: TaskManagerProps) {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+
   const [title, setTitle] = useState("");
   const [descript, setDescript] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(
     defaultCategory?.id || null
   );
-
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [tasks, setTasks] = useState<any[]>([]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -34,36 +46,50 @@ export default function TaskManager({
     category_id: "",
   });
 
-  // refetch ทุกครั้งที่หมวดเปลี่ยน
   useEffect(() => {
+    if (!userId) return;
     fetchAll();
-  }, [filterCategoryId]);
+  }, [userId, filterCategoryId]);
 
   async function fetchAll() {
-    let q = supabase
+    const { data: cats, error: catErr } = await supabase
+      .from("categories")
+      .select("id,name")
+      .eq("user_id", userId)
+      .order("name", { ascending: true });
+    if (catErr) console.error("fetchCategories:", catErr);
+    else setCategories(cats ?? []);
+
+    let query = supabase
       .from("tasks")
       .select("*")
+      .eq("user_id", userId)
       .order("due_date", { ascending: true });
-    if (filterCategoryId) q = q.eq("category_id", filterCategoryId);
+    if (filterCategoryId) query = query.eq("category_id", filterCategoryId);
 
-    const [{ data: cats }, { data: ts }] = await Promise.all([
-      supabase.from("categories").select("id,name"),
-      q,
-    ]);
-    setCategories(cats ?? []);
-    setTasks(ts ?? []);
+    const { data: ts, error: taskErr } = await query;
+    if (taskErr) console.error("fetchTasks:", taskErr);
+    else setTasks(ts ?? []);
+
     setCategoryId(defaultCategory?.id || null);
   }
 
   async function createTask(e: React.FormEvent) {
     e.preventDefault();
-    await supabase.from("tasks").insert({
+    if (!title.trim()) return;
+
+    const { error } = await supabase.from("tasks").insert({
       title,
       descript,
       due_date: dueDate || null,
       category_id: categoryId,
       status: false,
+      user_id: userId,
     });
+    if (error) {
+      console.error("createTask:", error);
+      return;
+    }
     setTitle("");
     setDescript("");
     setDueDate("");
@@ -72,17 +98,25 @@ export default function TaskManager({
   }
 
   async function toggleStatus(id: string, current: boolean) {
-    await supabase.from("tasks").update({ status: !current }).eq("id", id);
+    await supabase
+      .from("tasks")
+      .update({ status: !current })
+      .eq("id", id)
+      .eq("user_id", userId);
     fetchAll();
   }
 
   async function removeTask(id: string) {
-    if (!confirm("แน่ใจหรือไม่ว่าต้องการลบงานนี้?")) return;
-    await supabase.from("tasks").delete().eq("id", id);
+    if (!confirm("ลบงานนี้?")) return;
+    await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId);
     fetchAll();
   }
 
-  function startEdit(task: any) {
+  function startEdit(task: TaskItem) {
     setEditingId(task.id);
     setEditForm({
       title: task.title,
@@ -101,14 +135,14 @@ export default function TaskManager({
         due_date: editForm.due_date || null,
         category_id: editForm.category_id || null,
       })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", userId);
     setEditingId(null);
     fetchAll();
   }
 
   return (
     <div className="card p-6 bg-white rounded-lg shadow max-w-3xl mx-auto">
-      {/* เพิ่มรายการ TODO */}
       <h3 className="text-xl font-semibold mb-4">เพิ่มรายการ TODO</h3>
       <form onSubmit={createTask} className="space-y-4">
         <input
@@ -118,7 +152,6 @@ export default function TaskManager({
           className="w-full p-2 border rounded"
           required
         />
-
         <textarea
           value={descript}
           onChange={(e) => setDescript(e.target.value)}
@@ -126,7 +159,6 @@ export default function TaskManager({
           className="w-full p-2 border rounded"
           rows={3}
         />
-
         <div className="flex flex-wrap gap-2">
           <select
             value={categoryId || ""}
@@ -144,21 +176,18 @@ export default function TaskManager({
               </option>
             ))}
           </select>
-
           <input
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
             className="p-2 border rounded"
           />
-
           <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
             เพิ่ม
           </button>
         </div>
       </form>
 
-      {/* รายการสิ่งต้องทำ */}
       <h4 className="mt-8 mb-3 text-lg font-semibold">รายการสิ่งต้องทำ</h4>
       <ul className="divide-y divide-gray-200">
         {tasks.map((t) => (
@@ -167,7 +196,6 @@ export default function TaskManager({
             className="py-3 flex flex-col md:flex-row md:justify-between md:items-center"
           >
             {editingId === t.id ? (
-              // --- EDIT MODE ---
               <div className="w-full flex flex-col gap-4">
                 <input
                   value={editForm.title}
@@ -176,7 +204,6 @@ export default function TaskManager({
                   }
                   className="w-full p-2 border rounded"
                 />
-
                 <textarea
                   value={editForm.descript}
                   onChange={(e) =>
@@ -185,8 +212,6 @@ export default function TaskManager({
                   className="w-full p-2 border rounded"
                   rows={3}
                 />
-
-                {/* ตรงนี้เพิ่มช่องเลือกหมวดกับวันที่ */}
                 <div className="flex flex-wrap gap-2">
                   <select
                     value={editForm.category_id}
@@ -202,7 +227,6 @@ export default function TaskManager({
                       </option>
                     ))}
                   </select>
-
                   <input
                     type="date"
                     value={editForm.due_date}
@@ -212,7 +236,6 @@ export default function TaskManager({
                     className="p-2 border rounded"
                   />
                 </div>
-
                 <div className="flex gap-2 justify-end">
                   <button
                     onClick={() => saveEdit(t.id)}
@@ -229,7 +252,6 @@ export default function TaskManager({
                 </div>
               </div>
             ) : (
-              // --- VIEW MODE ---
               <div className="w-full flex flex-col md:flex-row md:justify-between md:items-center">
                 <div>
                   <div
