@@ -1,12 +1,14 @@
-// app/api/auth/register/route.ts
 import { NextResponse } from "next/server";
-import supabase from "@/lib/supabaseClient";
+import { getSupabaseAdmin } from "@/lib/supabaseServer";
 import bcrypt from "bcryptjs";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   const { username, password } = await req.json();
+  const supabase = getSupabaseAdmin();
 
-  // ตรวจสอบว่ามี username ซ้ำหรือไม่
+  // เช็คซ้ำ
   const { data: existing } = await supabase
     .from("users")
     .select("id")
@@ -14,20 +16,22 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (existing) {
-    return NextResponse.json({ error: "Username นี้ถูกใช้แล้ว" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Username นี้ถูกใช้แล้ว" },
+      { status: 400 }
+    );
   }
 
-  // เข้ารหัสรหัสผ่าน
+  // hash แล้ว insert
   const hashedPassword = await bcrypt.hash(password, 10);
-
   const { data, error } = await supabase
     .from("users")
     .insert({ username, password: hashedPassword })
-    .select();
+    .select("id");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  return NextResponse.json({ success: true, user: data[0] });
+  return NextResponse.json({ userId: data[0].id }, { status: 201 });
 }
