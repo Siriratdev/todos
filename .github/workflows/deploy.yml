@@ -9,20 +9,18 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    # Inject Supabase creds & disable telemetry
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      NEXT_TELEMETRY_DISABLED: 1
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Cache Node modules
+        uses: actions/cache@v3
         with:
-          node-version: 22
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build project
-        run: npm run build
-        
-      - name: Deploy to Vercel
-        run: npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+          path: ~/.npm
+          key: ${{ runner
