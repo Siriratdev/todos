@@ -9,42 +9,24 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    # inject secrets and disable telemetry
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      NEXT_TELEMETRY_DISABLED: 1
-
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Use Node.js 22
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Restore Next.js build cache
-        uses: actions/cache@v3
-        with:
-          path: .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-
+          node-version: 20  # แนะนำ Node 20
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
-      - name: Build Next.js (local)
+      - name: Build project
         run: npm run build
-
-      - name: Save Next.js build cache
-        if: success()
-        uses: actions/cache@v3
-        with:
-          path: .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Deploy to Vercel
         run: npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
