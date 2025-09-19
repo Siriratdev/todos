@@ -32,19 +32,18 @@ export default function AuthForm({ mode }: AuthFormProps) {
         setMsg(data.error || "เกิดข้อผิดพลาด");
       } else {
         if (mode === "register") {
-          setMsg("สมัครสมาชิกสำเร็จ! กำลังไปหน้าเข้าสู่ระบบ...");
+          setMsg("สมัครสมาชิกสำเร็จ กำลังไปหน้าเข้าสู่ระบบ");
           setTimeout(() => router.push("/auth/login"), 1000);
         } else {
-          // login สำเร็จ: เก็บ userId แล้วไป Dashboard
           if (data.userId) {
             localStorage.setItem("userId", data.userId);
           }
-          setMsg("เข้าสู่ระบบสำเร็จ! กำลังไปหน้า Dashboard...");
+          setMsg("เข้าสู่ระบบสำเร็จ กำลังไปหน้า Dashboard");
           setTimeout(() => router.push("/dashboard"), 500);
         }
       }
     } catch (err) {
-      setMsg("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+      setMsg("Eror");
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,3 @@
-// app/auth/register/page.tsx
 "use client";
 
 import Link from "next/link";
@@ -58,7 +57,7 @@ export default function RegisterPage() {
           </div>
 
           <button type="submit" className="btn">
-            Register
+            Sign Up
           </button>
         </form>
 

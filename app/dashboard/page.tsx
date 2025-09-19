@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import supabase from "@/lib/supabaseClient";
 import TaskManager from "@/components/TaskManager";
@@ -8,116 +8,118 @@ import CategoryForm from "@/components/CategoryForm";
 import CalendarView from "@/components/CalendarView";
 
 type Section = "tasks" | "categories" | "calendar";
-
-interface CategoryInfo {
-  id: string;
-  name: string;
-  color: string;
+interface CategoryInfo { 
+  id: string; 
+  name: string; 
+  color: string; 
 }
+
+const TAB_MAP: Record<Section, string> = {
+  tasks: "สิ่งที่ต้องทำ",
+  categories: "หมวดหมู่",
+  calendar: "ปฏิทิน",
+};
 
 export default function DashboardPage() {
   const [activeSection, setActiveSection] = useState<Section>("tasks");
   const [selectedCategory, setSelectedCategory] = useState<CategoryInfo | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const router = useRouter();
 
-  // โหลด userId จาก localStorage (หรือจาก Supabase Auth)
   useEffect(() => {
     const uid = localStorage.getItem("userId");
-    if (!uid) {
-      router.push("/auth/login");
-    } else {
-      setUserId(uid);
-    }
+    if (!uid) router.replace("/auth/login");
+    else setUserId(uid);
   }, [router]);
 
-  async function handleLogout() {
-    if (!confirm("แน่ใจหรือไม่ว่าต้องการออกจากระบบ?")) return;
-    // ถ้าใช้ Supabase Auth
+  const handleLogout = useCallback(async () => {
+    if (!confirm("ออกจากระบบหรือไม่?")) return;
     await supabase.auth.signOut();
     localStorage.removeItem("userId");
-    router.push("/auth/login");
-  }
+    router.replace("/auth/login");
+  }, [router]);
 
   if (!userId) {
-    return <div className="p-6 text-center">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        กำลังดำเนินการ...
+      </div>
+    );
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r p-6 flex flex-col">
+    <>
+      <button
+        className={`toggle md:hidden ${drawerOpen ? "open" : ""}`}
+        onClick={() => setDrawerOpen((v) => !v)}
+      >
+        ☰
+      </button>
+
+      <div
+        className={`drawer-overlay ${drawerOpen ? "open" : ""}`}
+        onClick={() => setDrawerOpen(false)}
+      />
+
+      <aside className={`drawer ${drawerOpen ? "open" : ""}`}>
+        <div className="logo mb-6">TODO</div>
+
+        {(["tasks", "categories", "calendar"] as Section[]).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => {
+              setActiveSection(tab);
+              setSelectedCategory(null);
+              setDrawerOpen(false);
+            }}
+            className={`nav-button ${
+              activeSection === tab ? "active" : ""
+            }`}
+          >
+            {TAB_MAP[tab]}
+          </button>
+        ))}
+
         <button
           onClick={() => {
-            setSelectedCategory(null);
-            setActiveSection("tasks");
+            handleLogout();
+            setDrawerOpen(false);
           }}
-          className={`mb-4 text-left px-4 py-2 rounded w-full ${
-            activeSection === "tasks" && !selectedCategory
-              ? "bg-blue-500 text-white"
-              : "hover:bg-gray-100 text-gray-700"
-          }`}
+          className="logout-button mt-auto"
         >
-          สิ่งที่ต้องทำ
+          ออกจากระบบ
         </button>
-        <button
-          onClick={() => setActiveSection("categories")}
-          className={`mb-4 text-left px-4 py-2 rounded w-full ${
-            activeSection === "categories"
-              ? "bg-blue-500 text-white"
-              : "hover:bg-gray-100 text-gray-700"
-          }`}
-        >
-          หมวดหมู่
-        </button>
-        <button
-          onClick={() => setActiveSection("calendar")}
-          className={`mb-4 text-left px-4 py-2 rounded w-full ${
-            activeSection === "calendar"
-              ? "bg-blue-500 text-white"
-              : "hover:bg-gray-100 text-gray-700"
-          }`}
-        >
-          ปฏิทิน
-        </button>
-
-        <div className="mt-auto">
-          <button
-            onClick={handleLogout}
-            className="text-red-600 hover:bg-gray-100 px-4 py-2 rounded w-full text-left"
-          >
-            ออกจากระบบ
-          </button>
-        </div>
       </aside>
 
-      {/* Main */}
-      <main className="flex-1 p-6 overflow-auto">
-        {/* Tasks */}
+      <main className="main-content">
         {activeSection === "tasks" && (
-          <div className="max-w-4xl mx-auto">
-            {selectedCategory ? (
-              <h1
-                className="text-2xl font-semibold mb-4 p-3 rounded text-white"
-                style={{ backgroundColor: selectedCategory.color }}
-              >
-                งานหมวด: {selectedCategory.name}
+          <div className="w-full max-w-4xl">
+            <header className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-semibold">
+                {selectedCategory
+                  ? `งานหมวด: ${selectedCategory.name}`
+                  : "งานทั้งหมด"}
               </h1>
-            ) : (
-              <h1 className="text-2xl font-semibold mb-4">งานทั้งหมด</h1>
-            )}
-
+              {selectedCategory && (
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className="text-sm text-gray-500 hover:underline"
+                >
+                  ดูทั้งหมด
+                </button>
+              )}
+            </header>
             <TaskManager
               userId={userId}
-              filterCategoryId={selectedCategory?.id ?? null}
+              filterCategoryId={selectedCategory?.id || null}
               defaultCategory={selectedCategory}
             />
           </div>
         )}
 
-        {/* Categories */}
         {activeSection === "categories" && (
-          <div className="max-w-lg mx-auto">
+          <div className="w-full max-w-lg">
             <h1 className="text-2xl font-semibold mb-4">หมวดหมู่</h1>
             <CategoryForm
               userId={userId}
@@ -129,14 +131,13 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Calendar */}
         {activeSection === "calendar" && (
-          <div className="max-w-4xl mx-auto">
+          <div className="w-full max-w-4xl">
             <h1 className="text-2xl font-semibold mb-4">ปฏิทิน</h1>
             <CalendarView />
           </div>
         )}
       </main>
-    </div>
+    </>
   );
 }
