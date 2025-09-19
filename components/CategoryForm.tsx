@@ -1,7 +1,8 @@
-"use client";
+// components/CategoryForm.tsx
+'use client';
 
-import { useEffect, useState } from "react";
-import supabase from "../lib/supabaseClient";
+import { useEffect, useState } from 'react';
+import supabase from '@/lib/supabaseClient';
 
 interface Category {
   id: string;
@@ -11,16 +12,16 @@ interface Category {
 
 interface CategoryFormProps {
   userId: string;
-  onSelect?: (id: string, name: string) => void;
+  onSelect?: (id: string, name: string, color: string) => void;
 }
 
 export default function CategoryForm({ userId, onSelect }: CategoryFormProps) {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [name, setName] = useState("");
-  const [color, setColor] = useState("#0ea5e9");
+  const [name, setName] = useState('');
+  const [color, setColor] = useState('#0ea5e9');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editColor, setEditColor] = useState("#0ea5e9");
+  const [editName, setEditName] = useState('');
+  const [editColor, setEditColor] = useState('#0ea5e9');
 
   useEffect(() => {
     if (!userId) return;
@@ -29,32 +30,33 @@ export default function CategoryForm({ userId, onSelect }: CategoryFormProps) {
 
   async function fetchCategories() {
     const { data, error } = await supabase
-      .from("categories")
-      .select("id,name,color")
-      .eq("user_id", userId)
-      .order("name", { ascending: true });
+      .from('categories')
+      .select('id, name, color')
+      .eq('user_id', userId)
+      .order('name', { ascending: true });
+
     if (error) {
-      console.error("fetchCategories:", error);
+      console.error('fetchCategories:', error);
       return;
     }
-    setCategories(data ?? []);
+    setCategories(data || []);
   }
 
   async function createCategory(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const { error } = await supabase.from("categories").insert({
-      name: name.trim(),
-      color,
-      user_id: userId,
-    });
+    const { error } = await supabase
+      .from('categories')
+      .insert({ name: name.trim(), color, user_id: userId });
+
     if (error) {
-      console.error("createCategory:", error);
+      console.error('createCategory:', error);
       return;
     }
-    setName("");
-    setColor("#0ea5e9");
+
+    setName('');
+    setColor('#0ea5e9');
     fetchCategories();
   }
 
@@ -64,34 +66,38 @@ export default function CategoryForm({ userId, onSelect }: CategoryFormProps) {
     setEditColor(cat.color);
   }
 
-  async function saveEdit(id: string) {
-    if (!editName.trim()) return;
+  async function saveEdit() {
+    if (!editingId || !editName.trim()) return;
 
     const { error } = await supabase
-      .from("categories")
+      .from('categories')
       .update({ name: editName.trim(), color: editColor })
-      .eq("id", id)
-      .eq("user_id", userId);
+      .eq('id', editingId)
+      .eq('user_id', userId);
+
     if (error) {
-      console.error("saveEdit:", error);
+      console.error('saveEdit:', error);
       return;
     }
+
     setEditingId(null);
     fetchCategories();
   }
 
   async function removeCategory(id: string) {
-    if (!confirm("ลบหมวดนี้?")) return;
+    if (!confirm('ลบหมวดนี้?')) return;
 
     const { error } = await supabase
-      .from("categories")
+      .from('categories')
       .delete()
-      .eq("id", id)
-      .eq("user_id", userId);
+      .eq('id', id)
+      .eq('user_id', userId);
+
     if (error) {
-      console.error("removeCategory:", error);
+      console.error('removeCategory:', error);
       return;
     }
+
     fetchCategories();
   }
 
@@ -103,7 +109,7 @@ export default function CategoryForm({ userId, onSelect }: CategoryFormProps) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            saveEdit(editingId);
+            saveEdit();
           }}
           className="flex gap-2 mb-6"
         >
@@ -156,42 +162,37 @@ export default function CategoryForm({ userId, onSelect }: CategoryFormProps) {
       )}
 
       <ul className="space-y-2">
-        {categories.map((c) => {
-          const isEditing = c.id === editingId;
-          return (
-            <li
-              key={c.id}
-              className="flex items-center justify-between p-3 rounded cursor-pointer"
-              style={{ backgroundColor: c.color }}
-              onClick={() => !isEditing && onSelect?.(c.id, c.name)}
-            >
-              <span className="text-white font-medium">{c.name}</span>
-              {!isEditing && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startEdit(c);
-                    }}
-                    className="underline text-white text-sm"
-                  >
-                    แก้ไข
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeCategory(c.id);
-                    }}
-                    className="underline text-white text-sm"
-                  >
-                    ลบ
-                  </button>
-                </div>
-              )}
-            </li>
-          );
-        })}
+        {categories.map((c) => (
+          <li
+            key={c.id}
+            className="flex items-center justify-between p-3 rounded cursor-pointer"
+            style={{ backgroundColor: c.color }}
+            onClick={() => onSelect?.(c.id, c.name, c.color)}
+          >
+            <span className="text-white font-medium">{c.name}</span>
+            <div className="flex gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startEdit(c);
+                }}
+                className="underline text-white text-sm"
+              >
+                แก้ไข
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeCategory(c.id);
+                }}
+                className="underline text-white text-sm"
+              >
+                ลบ
+              </button>
+            </div>
+          </li>
+        ))}
       </ul>
     </div>
-  );
+);
 }
