@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabaseServer";
+import supabase from "@/lib/supabaseClient";
 import bcrypt from "bcryptjs";
-
-export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   const { username, password } = await req.json();
-  const supabase = getSupabaseAdmin();
 
-  // ดึง user + hashed password
+  // ดึงข้อมูลผู้ใช้
   const { data: user, error } = await supabase
     .from("users")
     .select("id, password")
@@ -22,7 +19,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // ตรวจสอบ bcrypt
+  // ตรวจสอบรหัสผ่าน
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     return NextResponse.json(
