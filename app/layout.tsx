@@ -1,16 +1,20 @@
-import Link from "next/link";
-import "./globals.css";
+// app/layout.tsx
+import './globals.css'
 
 export const metadata = {
-  title: "ToDo App",
-};
+  title: 'ToDo App',
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="en">
       <body>
         <main>{children}</main>
       </body>
     </html>
-  );
+  )
 }

@@ -1,104 +1,113 @@
-// components/CategoryForm.tsx
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import supabase from '@/lib/supabaseClient';
+import { useEffect, useState, useCallback } from 'react'
+import supabase from '@/lib/supabaseClient'
 
 interface Category {
-  id: string;
-  name: string;
-  color: string;
+  id: string
+  name: string
+  color: string
 }
 
 interface CategoryFormProps {
-  userId: string;
-  onSelect?: (id: string, name: string, color: string) => void;
+  userId: string
+  onSelect?: (id: string, name: string, color: string) => void
 }
 
 export default function CategoryForm({ userId, onSelect }: CategoryFormProps) {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [name, setName] = useState('');
-  const [color, setColor] = useState('#0ea5e9');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editColor, setEditColor] = useState('#0ea5e9');
+  const [categories, setCategories] = useState<Category[]>([])
+  const [name, setName] = useState('')
+  const [color, setColor] = useState('#0ea5e9')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editColor, setEditColor] = useState('#0ea5e9')
+
+  // ห่อ fetch ใน useCallback แล้วใส่ dependency ให้ครบ
+  const fetchCategories = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, color')
+        .eq('user_id', userId)
+        .order('name', { ascending: true })
+      if (error) {
+        console.error('fetchCategories error:', error)
+        return
+      }
+      setCategories(data || [])
+    } catch (error) {
+      console.error(error)
+    }
+  }, [userId])
 
   useEffect(() => {
-    if (!userId) return;
-    fetchCategories();
-  }, [userId]);
-
-  async function fetchCategories() {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('id, name, color')
-      .eq('user_id', userId)
-      .order('name', { ascending: true });
-
-    if (error) {
-      console.error('fetchCategories:', error);
-      return;
-    }
-    setCategories(data || []);
-  }
+    if (!userId) return
+    fetchCategories()
+  }, [userId, fetchCategories])
 
   async function createCategory(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
+    e.preventDefault()
+    if (!name.trim()) return
 
-    const { error } = await supabase
-      .from('categories')
-      .insert({ name: name.trim(), color, user_id: userId });
-
-    if (error) {
-      console.error('createCategory:', error);
-      return;
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .insert({ name: name.trim(), color, user_id: userId })
+      if (error) {
+        console.error('createCategory error:', error)
+        return
+      }
+      setName('')
+      setColor('#0ea5e9')
+      fetchCategories()
+    } catch (error) {
+      console.error(error)
     }
-
-    setName('');
-    setColor('#0ea5e9');
-    fetchCategories();
   }
 
   function startEdit(cat: Category) {
-    setEditingId(cat.id);
-    setEditName(cat.name);
-    setEditColor(cat.color);
+    setEditingId(cat.id)
+    setEditName(cat.name)
+    setEditColor(cat.color)
   }
 
   async function saveEdit() {
-    if (!editingId || !editName.trim()) return;
+    if (!editingId || !editName.trim()) return
 
-    const { error } = await supabase
-      .from('categories')
-      .update({ name: editName.trim(), color: editColor })
-      .eq('id', editingId)
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('saveEdit:', error);
-      return;
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update({ name: editName.trim(), color: editColor })
+        .eq('id', editingId)
+        .eq('user_id', userId)
+      if (error) {
+        console.error('saveEdit error:', error)
+        return
+      }
+      setEditingId(null)
+      fetchCategories()
+    } catch (error) {
+      console.error(error)
     }
-
-    setEditingId(null);
-    fetchCategories();
   }
 
   async function removeCategory(id: string) {
-    if (!confirm('ลบหมวดนี้?')) return;
+    if (!confirm('ลบหมวดนี้?')) return
 
-    const { error } = await supabase
-      .from('categories')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('removeCategory:', error);
-      return;
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId)
+      if (error) {
+        console.error('removeCategory error:', error)
+        return
+      }
+      fetchCategories()
+    } catch (error) {
+      console.error(error)
     }
-
-    fetchCategories();
   }
 
   return (
@@ -108,8 +117,8 @@ export default function CategoryForm({ userId, onSelect }: CategoryFormProps) {
       {editingId ? (
         <form
           onSubmit={(e) => {
-            e.preventDefault();
-            saveEdit();
+            e.preventDefault()
+            saveEdit()
           }}
           className="flex gap-2 mb-6"
         >
@@ -162,37 +171,42 @@ export default function CategoryForm({ userId, onSelect }: CategoryFormProps) {
       )}
 
       <ul className="space-y-2">
-        {categories.map((c) => (
-          <li
-            key={c.id}
-            className="flex items-center justify-between p-3 rounded cursor-pointer"
-            style={{ backgroundColor: c.color }}
-            onClick={() => onSelect?.(c.id, c.name, c.color)}
-          >
-            <span className="text-white font-medium">{c.name}</span>
-            <div className="flex gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  startEdit(c);
-                }}
-                className="underline text-white text-sm"
-              >
-                แก้ไข
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeCategory(c.id);
-                }}
-                className="underline text-white text-sm"
-              >
-                ลบ
-              </button>
-            </div>
-          </li>
-        ))}
+        {categories.map((c) => {
+          const isEditing = c.id === editingId
+          return (
+            <li
+              key={c.id}
+              className="flex items-center justify-between p-3 rounded cursor-pointer"
+              style={{ backgroundColor: c.color }}
+              onClick={() => !isEditing && onSelect?.(c.id, c.name, c.color)}
+            >
+              <span className="text-white font-medium">{c.name}</span>
+              {!isEditing && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      startEdit(c)
+                    }}
+                    className="underline text-white text-sm"
+                  >
+                    แก้ไข
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removeCategory(c.id)
+                    }}
+                    className="underline text-white text-sm"
+                  >
+                    ลบ
+                  </button>
+                </div>
+              )}
+            </li>
+          )
+        })}
       </ul>
     </div>
-);
+  )
 }
