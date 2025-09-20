@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 export async function POST(req: Request) {
   const { username, password } = await req.json();
 
-  // ดึงข้อมูลผู้ใช้
+  // ดึง user+hash
   const { data: user, error } = await supabase
     .from("users")
     .select("id, password")
@@ -19,9 +19,9 @@ export async function POST(req: Request) {
     );
   }
 
-  // ตรวจสอบรหัสผ่าน
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
+  // ตรวจ bcrypt
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) {
     return NextResponse.json(
       { error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" },
       { status: 401 }
