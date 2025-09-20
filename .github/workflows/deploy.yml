@@ -12,6 +12,25 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v4
-      - run: npm i -g vercel@latest
-      - run: npx vercel deploy --prod --yes
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show Node & NPM versions
+        run: |
+          echo "Node version: $(node -v)"
+          echo "NPM version: $(npm -v)"
+
+      - name: Show VERCEL_TOKEN for debug
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "VERCEL_TOKEN is empty"
+            exit 1
+          else
+            echo "VERCEL_TOKEN is set"
+          fi
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      - name: Deploy to Vercel
+        run: npx vercel deploy --prod --yes
