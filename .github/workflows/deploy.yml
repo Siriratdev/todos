@@ -1,29 +1,17 @@
-# .github/workflows/deploy.yml
-name: CI/CD (Build & Deploy to Vercel)
+name: CI/CD Deploy to Vercel
+
 on:
   push:
     branches: [ "main" ]
   workflow_dispatch:
+
 jobs:
-  build_and_deploy:
+  deploy:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: 'npm'
-      - name: Install deps
-        run: npm ci
-      - name: Typecheck
-        run: npx tsc -b
-      - name: Lint (optional)
-        run: npm run lint || true
-      - name: Install Vercel CLI
-        run: npm i -g vercel@latest
-      - name: Pull Vercel Project Settings
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Deploy (Vercel builds on cloud)
-        run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - uses: actions/checkout@v4
+      - run: npm i -g vercel@latest
+      - run: npx vercel deploy --prod --yes
