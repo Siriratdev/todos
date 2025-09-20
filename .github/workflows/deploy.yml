@@ -1,4 +1,4 @@
-name: CI/CD (Build & Deploy to Vercel)
+name: CI/CD Deploy to Vercel
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_and_deploy:
+  deploy:
     runs-on: ubuntu-latest
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -14,12 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: 'npm'
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
 
-      - run: npm ci
-      - run: npm run build
-      - run: npm i -g vercel@latest
-      - run: npx vercel deploy --prod --yes
+      - name: Deploy to Vercel (no build locally)
+        run: npx vercel deploy --prod --yes
