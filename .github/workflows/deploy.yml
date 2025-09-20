@@ -26,20 +26,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build project
-        run: npm run build
+      - name: Typecheck
+        run: npx tsc -b
+
+      - name: Lint (optional)
+        run: npm run lint || true
 
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
-      - name: Debug secrets (safe)
-        run: |
-          echo "VERCEL_TOKEN length: ${#VERCEL_TOKEN}"
-          echo "ORG_ID: ${VERCEL_ORG_ID}"
-          echo "PROJECT_ID: ${VERCEL_PROJECT_ID}"
+      - name: Debug Vercel Token
+        run: echo "VERCEL_TOKEN length: ${#VERCEL_TOKEN}"
 
       - name: Pull Vercel Project Settings
         run: vercel pull --yes --environment=production
 
-      - name: Deploy to Vercel
-        run: vercel deploy --prod --yes
+      - name: Deploy (Vercel builds on cloud)
+        run: vercel deploy --prod
