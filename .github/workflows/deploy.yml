@@ -1,10 +1,7 @@
-# .github/workflows/deploy.yml
-name: CI/CD (Build & Deploy to Vercel)
 name: Build & Deploy to Vercel
 
 on:
   push:
-    branches: [ "main" ]
     branches:
       - main
   workflow_dispatch:
@@ -15,19 +12,12 @@ jobs:
     environment: Production
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
       - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Setup Node.js v20
         uses: actions/setup-node@v3
         with:
-          node-version: 18
-          cache: 'npm'
-      - name: Install deps
           node-version: "20"
           cache: "npm"
 
@@ -36,19 +26,8 @@ jobs:
           echo NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} >> .env.local
           echo NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} >> .env.local
           echo SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} >> .env.local
-
       - name: Install dependencies
         run: npm ci
-      - name: Typecheck
-        run: npx tsc -b
-      - name: Lint (optional)
-        run: npm run lint || true
-      - name: Install Vercel CLI
-        run: npm i -g vercel@latest
-      - name: Pull Vercel Project Settings
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Deploy (Vercel builds on cloud)
-        run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build Next.js
         run: npm run build
